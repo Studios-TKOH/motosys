@@ -1,10 +1,10 @@
-import { Link } from 'react-router';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store/store';
-import { Card, CardContent } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { ShoppingCart, Plus, FileText } from 'lucide-react';
+import { Link } from "react-router";
+import { useSelector } from "react-redux";
+import { RootState } from "../store/store";
+import { Card, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { ShoppingCart, Plus, FileText } from "lucide-react";
 
 export default function Sales() {
   const sales = useSelector((state: RootState) => state.sales.sales);
@@ -14,7 +14,9 @@ export default function Sales() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Ventas</h1>
-          <p className="text-gray-600 mt-1">{sales.length} ventas registradas</p>
+          <p className="text-gray-600 mt-1">
+            {sales.length} ventas registradas
+          </p>
         </div>
         <Link to="/sales/new">
           <Button size="lg" className="h-12">
@@ -27,8 +29,12 @@ export default function Sales() {
       {sales.length === 0 ? (
         <Card className="p-12 text-center">
           <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <h3 className="text-xl font-medium text-gray-600 mb-2">No hay ventas registradas</h3>
-          <p className="text-gray-500 mb-4">Comienza registrando una nueva venta</p>
+          <h3 className="text-xl font-medium text-gray-600 mb-2">
+            No hay ventas registradas
+          </h3>
+          <p className="text-gray-500 mb-4">
+            Comienza registrando una nueva venta
+          </p>
           <Link to="/sales/new">
             <Button>
               <Plus className="w-4 h-4 mr-2" />
@@ -43,30 +49,47 @@ export default function Sales() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <p className="text-2xl font-bold text-blue-600">{sale.number}</p>
-                    <Badge variant="outline" className="mt-2">{sale.type}</Badge>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {sale.number}
+                    </p>
+                    {/* Añadimos un fallback visual si sale.type no está definido (aunque en DB lo guardamos vacío o sin tipo en ventas rápidas) */}
+                    {sale.type && (
+                      <Badge variant="outline" className="mt-2">
+                        {sale.type}
+                      </Badge>
+                    )}
                   </div>
-                  <Badge variant={sale.status === 'PAID' ? 'default' : 'secondary'}>
+                  <Badge
+                    variant={sale.status === "PAID" ? "default" : "secondary"}
+                  >
                     {sale.status}
                   </Badge>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500">Total:</span>
-                    <span className="font-bold text-xl">S/ {sale.totalAmount.toFixed(2)}</span>
+                    <span className="font-bold text-xl">
+                      S/ {sale.totalAmount.toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-500">Pagado:</span>
-                    <span className="font-medium">S/ {sale.paidAmount.toFixed(2)}</span>
+                    <span className="font-medium">
+                      S/ {(sale.paidAmount || 0).toFixed(2)}
+                    </span>
                   </div>
                   <div className="text-sm text-gray-500 pt-2">
                     {new Date(sale.createdAt).toLocaleDateString()}
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="w-full mt-4">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Ver Nota
-                </Button>
+
+                {/* AQUÍ ESTÁ LA MAGIA: Enlace dinámico a la nota de venta */}
+                <Link to={`/sales/${sale.id}`} className="block w-full mt-4">
+                  <Button variant="outline" size="sm" className="w-full">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Ver Nota
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           ))}
