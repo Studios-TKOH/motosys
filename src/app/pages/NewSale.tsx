@@ -4,7 +4,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { useForm, useFieldArray } from "react-hook-form";
 import { RootState, AppDispatch } from "../store/store";
 import { createSale } from "../store/slices/salesSlice";
-// NUEVO: Importamos la acción para crear la cuenta por cobrar
 import { createAccountReceivable } from "../store/slices/paymentsSlice";
 
 import {
@@ -30,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { Badge } from "../components/ui/badge";
 import { toast } from "sonner";
 import {
   Plus,
@@ -100,19 +98,19 @@ export default function NewSale() {
     name: "services",
   });
 
-  const watchedProducts = watch("products");
-  const watchedServices = watch("services");
+  // FIX AUTOSUMA: Observamos todo el form para fluidez
+  const formValues = watch();
 
   const totalAmount =
-    watchedProducts.reduce(
+    (formValues.products || []).reduce(
       (sum, p) =>
         sum +
-        (parseFloat(String(p.quantity)) || 0) *
-          (parseFloat(String(p.unitPrice)) || 0),
+        (parseFloat(String(p?.quantity)) || 0) *
+          (parseFloat(String(p?.unitPrice)) || 0),
       0,
     ) +
-    watchedServices.reduce(
-      (sum, s) => sum + (parseFloat(String(s.price)) || 0),
+    (formValues.services || []).reduce(
+      (sum, s) => sum + (parseFloat(String(s?.price)) || 0),
       0,
     );
 
@@ -191,17 +189,15 @@ export default function NewSale() {
         paidAmount: 0,
       };
 
-      // 1. Guardamos la Venta
       const createdSale = await dispatch(createSale(payload)).unwrap();
 
-      // 2. EL PUENTE: Creamos la Cuenta por Cobrar
       const endOfDay = new Date();
       endOfDay.setHours(23, 59, 59, 999);
 
       await dispatch(
         createAccountReceivable({
           saleId: createdSale.id,
-          customerId: customerId || "CLIENTE_MOSTRADOR", // Fallback si es venta anónima
+          customerId: customerId || "CLIENTE_MOSTRADOR",
           totalAmount: totalAmount,
           paidAmount: 0,
           dueDate: endOfDay.getTime(),
@@ -227,7 +223,7 @@ export default function NewSale() {
         <Button
           variant="outline"
           size="icon"
-          onClick={() => navigate("/sales")}
+          onClick={() => navigate(-1)} // Mejoramos la navegación hacia atrás para que sea fluida
           className="h-14 w-14"
           disabled={isSubmitting}
         >
@@ -261,16 +257,17 @@ export default function NewSale() {
                       Selecciona una moto para que el QR aparezca en la Nota de
                       Venta
                     </FormLabel>
+                    {/* FIX DOM CRASH: Usamos value controlado en vez de defaultValue */}
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value || undefined}
                     >
                       <FormControl>
                         <SelectTrigger className="h-14 text-lg">
                           <SelectValue placeholder="Venta anónima (Sin moto)" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent position="popper">
                         <SelectItem
                           value="none"
                           className="text-lg py-3 italic text-gray-500"
@@ -283,10 +280,15 @@ export default function NewSale() {
                             value={moto.id}
                             className="text-lg py-3"
                           >
-                            <span className="font-bold text-blue-600">
-                              {moto.shopCode}
-                            </span>{" "}
-                            - {moto.brand} {moto.model}
+                            {/* FIX DOM CRASH: Usar spans planos para el texto renderizado */}
+                            <span className="flex items-center gap-2">
+                              <span className="font-bold text-blue-600">
+                                {moto.shopCode}
+                              </span>
+                              <span>
+                                - {moto.brand} {moto.model}
+                              </span>
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -320,13 +322,13 @@ export default function NewSale() {
                 </div>
               )}
               {productFields.map((field, index) => {
-                const selectedPartId = watchedProducts[index]?.partId;
+                const selectedPartId = formValues.products?.[index]?.partId;
                 const stock = selectedPartId
                   ? getAvailableStock(selectedPartId)
                   : null;
                 const isOutOfStock = stock !== null && stock <= 0;
                 const qtyRequested = parseFloat(
-                  String(watchedProducts[index]?.quantity || 1),
+                  String(formValues.products?.[index]?.quantity || 1),
                 );
                 const isExceedingStock = stock !== null && qtyRequested > stock;
 
@@ -358,6 +360,7 @@ export default function NewSale() {
                         render={({ field: selectField }) => (
                           <FormItem className="flex-1 min-w-[200px]">
                             <FormLabel>Buscar Producto</FormLabel>
+                            {/* FIX DOM CRASH: Usamos value controlado */}
                             <Select
                               onValueChange={(val) => {
                                 selectField.onChange(val);
@@ -370,14 +373,17 @@ export default function NewSale() {
                                     selected.unitPrice,
                                   );
                               }}
-                              defaultValue={selectField.value}
+                              value={selectField.value || undefined}
                             >
                               <FormControl>
                                 <SelectTrigger className="h-14 text-lg bg-white">
                                   <SelectValue placeholder="Busca por SKU o Nombre..." />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent>
+                              <SelectContent
+                                position="popper"
+                                className="max-h-[300px] overflow-y-auto"
+                              >
                                 {parts.map((part) => {
                                   const currentStock = getAvailableStock(
                                     part.id,
@@ -389,20 +395,17 @@ export default function NewSale() {
                                       disabled={currentStock <= 0}
                                       className="py-3"
                                     >
-                                      <div className="flex items-center justify-between w-full gap-4">
+                                      {/* FIX DOM CRASH: Adiós Divs y Badges internos, puros spans limpios */}
+                                      <span className="flex items-center justify-between w-full gap-4">
                                         <span className="text-lg font-medium">
                                           {part.name} ({part.sku})
                                         </span>
-                                        <Badge
-                                          variant={
-                                            currentStock > 0
-                                              ? "default"
-                                              : "destructive"
-                                          }
+                                        <span
+                                          className={`px-3 py-1 text-sm font-bold rounded-full ${currentStock > 0 ? "bg-gray-900 text-white" : "bg-red-500 text-white"}`}
                                         >
                                           Stock: {currentStock}
-                                        </Badge>
-                                      </div>
+                                        </span>
+                                      </span>
                                     </SelectItem>
                                   );
                                 })}
@@ -432,6 +435,7 @@ export default function NewSale() {
                                 min="1"
                                 className={`h-14 text-xl font-bold text-center bg-white ${isExceedingStock ? "border-red-500 text-red-600 focus-visible:ring-red-500" : ""}`}
                                 {...field}
+                                onChange={(e) => field.onChange(e.target.value)}
                               />
                             </FormControl>
                             {isExceedingStock && (
@@ -457,6 +461,7 @@ export default function NewSale() {
                                 min="0"
                                 className="h-14 text-xl font-bold bg-white"
                                 {...field}
+                                onChange={(e) => field.onChange(e.target.value)}
                               />
                             </FormControl>
                           </FormItem>
@@ -535,6 +540,7 @@ export default function NewSale() {
                             min="0"
                             className="h-12 text-lg font-bold"
                             {...field}
+                            onChange={(e) => field.onChange(e.target.value)}
                           />
                         </FormControl>
                       </FormItem>
@@ -564,15 +570,28 @@ export default function NewSale() {
                   S/ {totalAmount.toFixed(2)}
                 </p>
               </div>
-              <Button
-                type="submit"
-                size="lg"
-                disabled={isSubmitting || totalAmount <= 0}
-                className="h-16 px-10 text-2xl font-bold bg-green-600 hover:bg-green-700 disabled:opacity-50 shadow-lg"
-              >
-                <Save className="mr-3 h-8 w-8" />
-                {isSubmitting ? "Procesando..." : "Generar Nota de Venta"}
-              </Button>
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="h-16 px-8 text-xl font-bold border-2"
+                  onClick={() => navigate(-1)} // Retroceder natural
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={isSubmitting || totalAmount <= 0}
+                  className="h-16 px-10 text-2xl font-bold bg-green-600 hover:bg-green-700 disabled:opacity-50 shadow-lg"
+                >
+                  <Save className="mr-3 h-8 w-8" />
+                  {isSubmitting ? "Procesando..." : "Generar Nota de Venta"}
+                </Button>
+              </div>
             </div>
           </div>
         </form>
