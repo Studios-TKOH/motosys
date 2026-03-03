@@ -144,6 +144,7 @@ export default function WorkOrderDetail() {
       icon: Truck,
     },
   };
+
   const StatusIcon = statusConfig[workOrder.status].icon;
 
   return (
@@ -164,6 +165,7 @@ export default function WorkOrderDetail() {
               {workOrder.number}
             </h1>
             <Badge
+              key={`badge-${workOrder.status}`} // FIX BUG INSERTBEFORE: Forzamos re-render de la UI de la placa al cambiar el estado
               className={`px-4 py-1.5 text-sm font-bold border-2 ${statusConfig[workOrder.status].color}`}
             >
               <StatusIcon className="w-4 h-4 mr-2" />
@@ -189,33 +191,36 @@ export default function WorkOrderDetail() {
               </p>
             </div>
 
-            {workOrder.status === "PENDING" && (
-              <Button
-                onClick={advanceStatus}
-                size="lg"
-                className="h-16 px-8 text-xl bg-blue-600 hover:bg-blue-700 w-full md:w-auto"
-              >
-                <Play className="mr-2 h-6 w-6" /> Iniciar Trabajo
-              </Button>
-            )}
-            {workOrder.status === "IN_PROGRESS" && (
-              <Button
-                onClick={advanceStatus}
-                size="lg"
-                className="h-16 px-8 text-xl bg-green-600 hover:bg-green-700 w-full md:w-auto"
-              >
-                <CheckCircle2 className="mr-2 h-6 w-6" /> Finalizar Trabajo
-              </Button>
-            )}
-            {workOrder.status === "COMPLETED" && (
-              <Button
-                onClick={advanceStatus}
-                size="lg"
-                className="h-16 px-8 text-xl bg-gray-800 hover:bg-gray-900 w-full md:w-auto"
-              >
-                <Truck className="mr-2 h-6 w-6" /> Entregar Moto
-              </Button>
-            )}
+            {/* FIX BUG INSERTBEFORE: Envolvemos los botones en un div persistente */}
+            <div key={`actions-${workOrder.status}`}>
+              {workOrder.status === "PENDING" && (
+                <Button
+                  onClick={advanceStatus}
+                  size="lg"
+                  className="h-16 px-8 text-xl bg-blue-600 hover:bg-blue-700 w-full md:w-auto"
+                >
+                  <Play className="mr-2 h-6 w-6" /> Iniciar Trabajo
+                </Button>
+              )}
+              {workOrder.status === "IN_PROGRESS" && (
+                <Button
+                  onClick={advanceStatus}
+                  size="lg"
+                  className="h-16 px-8 text-xl bg-green-600 hover:bg-green-700 w-full md:w-auto"
+                >
+                  <CheckCircle2 className="mr-2 h-6 w-6" /> Finalizar Trabajo
+                </Button>
+              )}
+              {workOrder.status === "COMPLETED" && (
+                <Button
+                  onClick={advanceStatus}
+                  size="lg"
+                  className="h-16 px-8 text-xl bg-gray-800 hover:bg-gray-900 w-full md:w-auto"
+                >
+                  <Truck className="mr-2 h-6 w-6" /> Entregar Moto
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
