@@ -61,7 +61,6 @@ export default function NewWorkOrder() {
     (state: RootState) => state.motorcycles.motorcycles,
   );
   const parts = useSelector((state: RootState) => state.parts.parts);
-  // SOLUCIÓN AL CRASH: Lo traemos como any para manejarlo dinámicamente si no es array
   const stockBalances: any = useSelector(
     (state: RootState) => (state.parts as any).stockBalances,
   );
@@ -101,23 +100,22 @@ export default function NewWorkOrder() {
     name: "parts",
   });
 
-  const watchedServices = watch("services");
-  const watchedParts = watch("parts");
+  // FIX AUTOSUMA: Observamos todo el formulario para que reaccione al instante a cada tecla pulsada
+  const formValues = watch();
 
   const totalAmount =
-    watchedServices.reduce(
-      (sum, s) => sum + (parseFloat(String(s.price)) || 0),
+    (formValues.services || []).reduce(
+      (sum, s) => sum + (parseFloat(String(s?.price)) || 0),
       0,
     ) +
-    watchedParts.reduce(
+    (formValues.parts || []).reduce(
       (sum, p) =>
         sum +
-        (parseFloat(String(p.quantity)) || 0) *
-          (parseFloat(String(p.unitPrice)) || 0),
+        (parseFloat(String(p?.quantity)) || 0) *
+          (parseFloat(String(p?.unitPrice)) || 0),
       0,
     );
 
-  // SOLUCIÓN AL CRASH: Función segura que no explota si stockBalances no es un Array
   const getAvailableStock = (partId: string) => {
     if (!stockBalances) return 0;
 
@@ -172,11 +170,8 @@ export default function NewWorkOrder() {
         })),
       };
 
-      // 1. Guardamos la Orden de Trabajo
       const createdWO = await dispatch(createWorkOrder(payload)).unwrap();
 
-      // 2. EL PUENTE: Creamos la Cuenta por Cobrar automáticamente
-      // Configuramos el vencimiento para el final del día de hoy (23:59:59)
       const endOfDay = new Date();
       endOfDay.setHours(23, 59, 59, 999);
 
@@ -242,26 +237,29 @@ export default function NewWorkOrder() {
                     <FormLabel className="text-lg font-bold">
                       Motocicleta a reparar *
                     </FormLabel>
+                    {/* FIX CONTROL SEGURO: Usamos value || undefined para evitar bugs de estado vacío en Radix */}
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value || undefined}
                     >
                       <FormControl>
                         <SelectTrigger className="h-14 text-lg">
+                          {/* FIX REMOVECHILD: SelectValue completamente puro, sin lógica anidada */}
                           <SelectValue placeholder="Selecciona o escanea una moto" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent
+                        position="popper"
+                        className="max-h-[300px] overflow-y-auto"
+                      >
                         {motorcycles.map((moto) => (
                           <SelectItem
                             key={moto.id}
                             value={moto.id}
                             className="text-lg py-3"
                           >
-                            <span className="font-bold text-blue-600">
-                              {moto.shopCode}
-                            </span>{" "}
-                            - {moto.brand} {moto.model} ({moto.color})
+                            {/* FIX REMOVECHILD: Todo el texto es un string directo */}
+                            {`${moto.shopCode} - ${moto.brand} ${moto.model} ${moto.color ? `(${moto.color})` : ""}`}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -350,6 +348,7 @@ export default function NewWorkOrder() {
                             min="0"
                             className="h-12 text-lg font-bold"
                             {...field}
+                            onChange={(e) => field.onChange(e.target.value)}
                           />
                         </FormControl>
                       </FormItem>
@@ -393,13 +392,13 @@ export default function NewWorkOrder() {
                 </div>
               )}
               {partFields.map((field, index) => {
-                const selectedPartId = watchedParts[index]?.partId;
+                const selectedPartId = formValues.parts?.[index]?.partId;
                 const stock = selectedPartId
                   ? getAvailableStock(selectedPartId)
                   : null;
                 const isOutOfStock = stock !== null && stock <= 0;
                 const qtyRequested = parseFloat(
-                  String(watchedParts[index]?.quantity || 1),
+                  String(formValues.parts?.[index]?.quantity || 1),
                 );
                 const isExceedingStock = stock !== null && qtyRequested > stock;
 
@@ -431,6 +430,7 @@ export default function NewWorkOrder() {
                         render={({ field: selectField }) => (
                           <FormItem className="flex-1 min-w-[200px]">
                             <FormLabel>Repuesto del Inventario</FormLabel>
+                            {/* FIX CONTROL SEGURO: value || undefined */}
                             <Select
                               onValueChange={(val) => {
                                 selectField.onChange(val);
@@ -444,14 +444,18 @@ export default function NewWorkOrder() {
                                   );
                                 }
                               }}
-                              defaultValue={selectField.value}
+                              value={selectField.value || undefined}
                             >
                               <FormControl>
                                 <SelectTrigger className="h-14 text-lg">
+                                  {/* FIX REMOVECHILD: Completamente limpio */}
                                   <SelectValue placeholder="Busca un producto..." />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent>
+                              <SelectContent
+                                position="popper"
+                                className="max-h-[300px] overflow-y-auto"
+                              >
                                 {parts.map((part) => {
                                   const currentStock = getAvailableStock(
                                     part.id,
@@ -463,20 +467,8 @@ export default function NewWorkOrder() {
                                       disabled={currentStock <= 0}
                                       className="py-3"
                                     >
-                                      <div className="flex items-center justify-between w-full gap-4">
-                                        <span className="text-lg font-medium">
-                                          {part.name} ({part.sku})
-                                        </span>
-                                        <Badge
-                                          variant={
-                                            currentStock > 0
-                                              ? "default"
-                                              : "destructive"
-                                          }
-                                        >
-                                          Stock: {currentStock}
-                                        </Badge>
-                                      </div>
+                                      {/* FIX REMOVECHILD: String plano */}
+                                      {`${part.name} (${part.sku}) — Stock: ${currentStock}`}
                                     </SelectItem>
                                   );
                                 })}
@@ -506,6 +498,7 @@ export default function NewWorkOrder() {
                                 min="1"
                                 className={`h-14 text-xl font-bold text-center ${isExceedingStock ? "border-red-500 text-red-600 focus-visible:ring-red-500" : ""}`}
                                 {...field}
+                                onChange={(e) => field.onChange(e.target.value)}
                               />
                             </FormControl>
                             {isExceedingStock && (
@@ -531,6 +524,7 @@ export default function NewWorkOrder() {
                                 min="0"
                                 className="h-14 text-xl font-bold"
                                 {...field}
+                                onChange={(e) => field.onChange(e.target.value)}
                               />
                             </FormControl>
                           </FormItem>
@@ -563,15 +557,28 @@ export default function NewWorkOrder() {
                   S/ {totalAmount.toFixed(2)}
                 </p>
               </div>
-              <Button
-                type="submit"
-                size="lg"
-                disabled={isSubmitting}
-                className="h-16 px-12 text-2xl font-bold bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-              >
-                <Save className="mr-3 h-8 w-8" />
-                {isSubmitting ? "Guardando..." : "Guardar Orden"}
-              </Button>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="h-16 px-8 text-xl font-bold border-2"
+                  onClick={() => navigate("/work-orders")}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={isSubmitting}
+                  className="h-16 px-12 text-2xl font-bold bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                >
+                  <Save className="mr-3 h-8 w-8" />
+                  {isSubmitting ? "Guardando..." : "Guardar Orden"}
+                </Button>
+              </div>
             </div>
           </div>
         </form>
