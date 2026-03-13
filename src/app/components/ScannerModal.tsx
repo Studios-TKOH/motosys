@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router';
-import { BrowserMultiFormatReader } from '@zxing/browser';
-import { Dialog, DialogContent } from './ui/dialog';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { X, Camera, Keyboard } from 'lucide-react';
-import { scanResolve, playBeep, vibrate } from '../lib/scanner';
-import ScanResolveModal from './ScanResolveModal';
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router";
+import { BrowserMultiFormatReader } from "@zxing/browser";
+import { Dialog, DialogContent } from "./ui/dialog";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { X, Camera, Keyboard } from "lucide-react";
+import { scanResolve, playBeep, vibrate } from "../lib/scanner";
+import ScanResolveModal from "./ScanResolveModal";
 
 interface ScannerModalProps {
   open: boolean;
@@ -15,9 +15,13 @@ interface ScannerModalProps {
   onScanSuccess?: (result: any) => void;
 }
 
-export default function ScannerModal({ open, onClose, onScanSuccess }: ScannerModalProps) {
+export default function ScannerModal({
+  open,
+  onClose,
+  onScanSuccess,
+}: ScannerModalProps) {
   const [useCamera, setUseCamera] = useState(true);
-  const [manualCode, setManualCode] = useState('');
+  const [manualCode, setManualCode] = useState("");
   const [scanResult, setScanResult] = useState<any>(null);
   const [resolveModalOpen, setResolveModalOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -47,32 +51,31 @@ export default function ScannerModal({ open, onClose, onScanSuccess }: ScannerMo
             const code = result.getText();
             await handleScan(code);
           }
-        }
+        },
       );
     } catch (error) {
-      console.error('Camera error:', error);
+      console.error("Camera error:", error);
     }
   };
 
   const stopCamera = () => {
     if (codeReaderRef.current) {
-      codeReaderRef.current.reset();
       codeReaderRef.current = null;
     }
   };
 
   const handleScan = async (code: string) => {
     stopCamera();
-    
+
     const result = await scanResolve(code);
-    
-    if (result.type === 'AMBIGUOUS') {
+
+    if (result.type === "AMBIGUOUS") {
       setScanResult(result);
       setResolveModalOpen(true);
-    } else if (result.type === 'NOT_FOUND') {
+    } else if (result.type === "NOT_FOUND") {
       playBeep(false);
       vibrate([100, 100, 100]);
-      alert('Código no encontrado: ' + code);
+      alert("Código no encontrado: " + code);
       if (useCamera) {
         setTimeout(() => startCamera(), 1000);
       }
@@ -89,10 +92,10 @@ export default function ScannerModal({ open, onClose, onScanSuccess }: ScannerMo
       onClose();
     } else {
       // Navigate based on type
-      if (result.type === 'MOTORCYCLE') {
+      if (result.type === "MOTORCYCLE") {
         navigate(`/motorcycles/${result.motorcycleId}`);
         onClose();
-      } else if (result.type === 'PRODUCT') {
+      } else if (result.type === "PRODUCT") {
         navigate(`/kardex`);
         onClose();
       }
@@ -128,7 +131,7 @@ export default function ScannerModal({ open, onClose, onScanSuccess }: ScannerMo
 
           <div className="flex gap-2 mb-4">
             <Button
-              variant={useCamera ? 'default' : 'outline'}
+              variant={useCamera ? "default" : "outline"}
               onClick={() => setUseCamera(true)}
               className="flex-1"
             >
@@ -136,7 +139,7 @@ export default function ScannerModal({ open, onClose, onScanSuccess }: ScannerMo
               Cámara
             </Button>
             <Button
-              variant={!useCamera ? 'default' : 'outline'}
+              variant={!useCamera ? "default" : "outline"}
               onClick={() => setUseCamera(false)}
               className="flex-1"
             >
@@ -146,19 +149,27 @@ export default function ScannerModal({ open, onClose, onScanSuccess }: ScannerMo
           </div>
 
           {useCamera ? (
-            <div className="relative bg-black rounded-lg overflow-hidden" style={{ height: '400px' }}>
+            <div
+              className="relative bg-black rounded-lg overflow-hidden"
+              style={{ height: "400px" }}
+            >
               <video
                 ref={videoRef}
                 className="w-full h-full object-cover"
                 autoPlay
                 playsInline
               />
-              <div className="absolute inset-0 border-4 border-blue-500 pointer-events-none" style={{ margin: '20%' }} />
+              <div
+                className="absolute inset-0 border-4 border-blue-500 pointer-events-none"
+                style={{ margin: "20%" }}
+              />
             </div>
           ) : (
             <form onSubmit={handleManualSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="manual-code" className="text-lg">Código Manual</Label>
+                <Label htmlFor="manual-code" className="text-lg">
+                  Código Manual
+                </Label>
                 <Input
                   id="manual-code"
                   value={manualCode}
@@ -181,10 +192,16 @@ export default function ScannerModal({ open, onClose, onScanSuccess }: ScannerMo
           open={resolveModalOpen}
           scanResult={scanResult}
           onResolve={(type) => {
-            if (type === 'MOTORCYCLE') {
-              handleSuccess({ type: 'MOTORCYCLE', motorcycleId: scanResult.ambiguousOptions?.motorcycleId });
-            } else if (type === 'PRODUCT') {
-              handleSuccess({ type: 'PRODUCT', productId: scanResult.ambiguousOptions?.productId });
+            if (type === "MOTORCYCLE") {
+              handleSuccess({
+                type: "MOTORCYCLE",
+                motorcycleId: scanResult.ambiguousOptions?.motorcycleId,
+              });
+            } else if (type === "PRODUCT") {
+              handleSuccess({
+                type: "PRODUCT",
+                productId: scanResult.ambiguousOptions?.productId,
+              });
             }
             handleResolveClose(true);
           }}
