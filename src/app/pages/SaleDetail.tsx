@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import { useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
@@ -11,10 +11,8 @@ export default function SaleDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // REFERENCIA PARA EL COMPONENTE QUE VAMOS A IMPRIMIR
   const ticketRef = useRef<HTMLDivElement>(null);
 
-  // Forzamos el tipo 'any' para evitar conflictos con la interfaz original
   const sale: any = useSelector((state: RootState) =>
     state.sales.sales.find((s: any) => s.id === id),
   );
@@ -49,9 +47,8 @@ export default function SaleDetail() {
   const balanceDue = sale.totalAmount - sale.paidAmount;
   const isPaid = balanceDue <= 0;
 
-  // CONFIGURACIÓN DE REACT-TO-PRINT (Actualizada a v3+)
   const handlePrint = useReactToPrint({
-    contentRef: ticketRef, // Pasamos la referencia directamente aquí
+    contentRef: ticketRef,
     documentTitle: `Nota_Venta_${sale.number}`,
   });
 
@@ -86,7 +83,7 @@ export default function SaleDetail() {
           ref={ticketRef}
           className="bg-white text-black font-mono leading-tight ticket-container"
           style={{
-            width: "300px", // MEDIDA EXACTA PARA 80mm
+            width: "300px",
             padding: "10px",
             boxSizing: "border-box",
           }}
